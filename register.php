@@ -1,63 +1,60 @@
+<?php
+session_start();
+require_once 'db_connection.php';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
+    $nome = htmlspecialchars($_POST["nome"]);
+    $email = htmlspecialchars($_POST["email"]);
+    $senha = password_hash($_POST["senha"], PASSWORD_DEFAULT);
+
+    // Verifica se o email já existe
+    $stmt = $conn->prepare("SELECT id FROM usuarios WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $erro = "Este email já está registrado.";
+    } else {
+        $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $nome, $email, $senha);
+        if ($stmt->execute()) {
+            $_SESSION['sucesso'] = "Conta criada com sucesso!";
+            header("Location: login.php");
+            exit();
+        } else {
+            $erro = "Erro ao criar conta. Tente novamente.";
+        }
+    }
+    $stmt->close();
+    $conn->close();
+}
+?>
+
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cadastro</title>
-    <link rel="stylesheet" type="text/css" href="cadlog.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Cadastro</h2>
-        <form action="register.php" method="POST">
-            <label for="full_name">Nome Completo:</label>
-            <input type="text" id="full_name" name="full_name" required>
-            <br>
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-            <br>
-            <label for="phone_number">Número de Telefone:</label>
-            <input type="text" id="phone_number" name="phone_number" required>
-            <br>
-            <label for="password">Senha:</label>
-            <input type="password" id="password" name="password" required>
-            <br>
-            <input type="submit" value="Cadastrar">
-        </form>
-        <p>Já tem conta? <a href="login.php">Entre aqui</a></p>
 
-        <?php
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            include 'db.php';
+<h2>Cadastro de Novo Usuário</h2>
 
-            $full_name = $_POST['full_name'];
-            $email = $_POST['email'];
-            $phone_number = $_POST['phone_number'];
-            $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+<?php if (isset($erro)) { echo "<p style='color:red;'>$erro</p>"; } ?>
+<form method="POST" action="">
+    <label for="nome">Nome:</label>
+    <input type="text" name="nome" required><br>
 
-            // Verificar se o número de telefone é válido
-            if (!preg_match("/^\+?\d{1,4}?\s?\(?\d{1,3}?\)?\s?\d{1,4}\s?\d{1,4}\s?\d{1,9}$/", $phone_number)) {
-                echo "Erro: Número de telefone inválido.";
-            } else {
-                // Verificar se o e-mail já existe
-                $check_email = "SELECT * FROM usuarios WHERE email='$email'";
-                $result = $conn->query($check_email);
+    <label for="email">Email:</label>
+    <input type="email" name="email" required><br>
 
-                if ($result->num_rows > 0) {
-                    echo "Erro: O e-mail já está em uso.";
-                } else {
-                    $sql = "INSERT INTO usuarios (full_name, email, phone_number, password) VALUES ('$full_name', '$email', '$phone_number', '$password')";
+    <label for="senha">Senha:</label>
+    <input type="password" name="senha" required><br>
 
-                    if ($conn->query($sql) === TRUE) {
-                        header("Location: login.php");
-                        exit();
-                    } else {
-                        echo "Erro: " . $sql . "<br>" . $conn->error;
-                    }
-                }
-            }
+    <button type="submit" name="register">Cadastrar</button>
+</form>
 
-            $conn->close();
-        }
-        ?>
-    </div>
 </body>
 </html>
